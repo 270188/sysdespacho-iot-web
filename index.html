@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SysDespacho | Centro IoT</title>
+  <meta name="description" content="Monitoreo IoT de movimiento e impactos en contenedores mediante el acelerómetro de un teléfono Android y MQTT." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230E9F9A'/%3E%3Crect x='10' y='22' width='30' height='20' rx='2' fill='white'/%3E%3Cpath d='M40 28h8l6 7v7H40z' fill='white'/%3E%3Ccircle cx='20' cy='46' r='5' fill='%230F172A'/%3E%3Ccircle cx='46' cy='46' r='5' fill='%230F172A'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <h2>Panel de control</h2>
+
+      <label class="campo" for="ventana">Ventana de análisis</label>
+      <select id="ventana">
+        <option value="50">50 lecturas</option>
+        <option value="100" selected>100 lecturas</option>
+        <option value="250">250 lecturas</option>
+        <option value="500">500 lecturas</option>
+      </select>
+
+      <button class="btn primario" id="btnActualizar" type="button">Actualizar información</button>
+
+      <div class="bloque">
+        <p class="etiqueta">ORIGEN DE DATOS</p>
+        <p><b>Sensor:</b> acelerómetro Android</p>
+        <p><b>Transporte:</b> MQTT por WebSocket</p>
+        <p><b>Almacenamiento:</b> <span id="txtAlmacen">—</span></p>
+        <p><b>Despliegue:</b> Vercel</p>
+      </div>
+
+      <div class="bloque">
+        <p class="etiqueta">LECTURA DE PRUEBA</p>
+        <p class="ayuda">Registra una lectura de prueba en el panel. Si el broker está conectado, también la publica en el topic MQTT.</p>
+        <div class="fila-botones">
+          <button class="btn chip normal" data-simular="NORMAL" type="button">Normal</button>
+          <button class="btn chip movimiento" data-simular="MOVIMIENTO" type="button">Movimiento</button>
+          <button class="btn chip impacto" data-simular="IMPACTO" type="button">Impacto</button>
+        </div>
+      </div>
+
+      <p class="pie">SysDespacho IoT · TA3</p>
+    </aside>
+
+    <main class="contenido">
+      <header class="cabecera">
+        <button class="btn icono" id="btnMenu" type="button" aria-label="Mostrar panel de control">☰</button>
+        <div>
+          <h1>Centro de monitoreo IoT</h1>
+          <p class="subtitulo">SysDespacho · Supervisión de movimiento e impactos en contenedores en tiempo casi real</p>
+        </div>
+      </header>
+
+      <div class="estado-linea">
+        <span class="badge" id="badgeMqtt">Conectando al broker…</span>
+        <span class="badge" id="badgeFrescura">Sin lecturas</span>
+        <span class="muted" id="txtUltima"></span>
+      </div>
+
+      <div class="aviso" id="avisoModo" hidden></div>
+
+      <section class="metricas">
+        <article class="metrica"><p>Lecturas almacenadas</p><strong id="mTotal">0</strong><div class="spark" id="sparkTotal"></div></article>
+        <article class="metrica"><p>Condición actual</p><strong id="mEstado">—</strong></article>
+        <article class="metrica"><p>Magnitud</p><strong id="mMagnitud">—</strong><div class="spark" id="sparkMag"></div></article>
+        <article class="metrica"><p>Variación</p><strong id="mVariacion">—</strong><div class="spark" id="sparkVar"></div></article>
+      </section>
+
+      <div class="alerta" id="alerta" hidden></div>
+
+      <nav class="tabs" role="tablist">
+        <button role="tab" class="tab activo" data-tab="resumen" type="button">Resumen operativo</button>
+        <button role="tab" class="tab" data-tab="analitica" type="button">Analítica del sensor</button>
+        <button role="tab" class="tab" data-tab="historial" type="button">Historial de lecturas</button>
+        <button role="tab" class="tab" data-tab="bitacora" type="button">Bitácora MQTT</button>
+      </nav>
+
+      <section class="panel" id="tab-resumen">
+        <h3>Torre de control del contenedor</h3>
+        <p class="muted">Vista ejecutiva del riesgo, orientación del sensor y distribución de condiciones.</p>
+        <div class="grid3">
+          <div class="tarjeta"><p class="t">Nivel operativo de riesgo</p><div class="chart" id="chGauge"></div></div>
+          <div class="tarjeta"><p class="t">Orientación actual del sensor</p><div class="chart" id="chRadar"></div></div>
+          <div class="tarjeta"><p class="t">Composición de estados</p><div class="chart" id="chDonut"></div></div>
+        </div>
+        <div class="tarjeta franja">
+          <span class="badge azul" id="bContenedor"></span>
+          <span class="badge gris" id="bRuta"></span>
+          <span class="badge" id="bTelemetria">Telemetría sin datos</span>
+        </div>
+      </section>
+
+      <section class="panel" id="tab-analitica" hidden>
+        <div class="grid21">
+          <div class="tarjeta">
+            <h3>Variación respecto de la gravedad</h3>
+            <p class="muted">Valores elevados pueden representar movimientos bruscos o impactos.</p>
+            <div class="chart alto" id="chLinea"></div>
+          </div>
+          <div class="tarjeta">
+            <h3>Resumen de condiciones</h3>
+            <table class="tabla" id="tablaResumen"><thead><tr><th>Estado</th><th>Lecturas</th><th>Participación</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="tab-historial" hidden>
+        <div class="tarjeta">
+          <div class="titulo-fila">
+            <div>
+              <h3>Registro reciente</h3>
+              <p class="muted">Detalle cronológico de las lecturas recibidas y almacenadas.</p>
+            </div>
+            <div class="acciones">
+              <select id="filtroEstado" aria-label="Filtrar por estado">
+                <option value="">Todos los estados</option>
+                <option>NORMAL</option><option>MOVIMIENTO</option><option>IMPACTO</option>
+              </select>
+              <button class="btn" id="btnCsv" type="button">Descargar CSV</button>
+            </div>
+          </div>
+          <div class="tabla-scroll">
+            <table class="tabla" id="tablaHistorial">
+              <thead><tr><th>Fecha y hora</th><th>Eje X</th><th>Eje Y</th><th>Eje Z</th><th>Magnitud</th><th>Variación</th><th>Estado</th><th>Origen</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="tab-bitacora" hidden>
+        <div class="tarjeta">
+          <h3>Bitácora del receptor</h3>
+          <p class="muted">Eventos de conexión y mensajes recibidos en este navegador, como en los logs del receptor.</p>
+          <pre class="consola" id="consola"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="vendor/mqtt.min.js"></script>
+  <script src="vendor/echarts.min.js"></script>
+  <script src="vendor/supabase.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
