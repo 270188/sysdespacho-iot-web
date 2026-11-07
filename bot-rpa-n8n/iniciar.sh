@@ -8,6 +8,6 @@ if [ "$RUN_TEST_ON_START" = "true" ]; then
   echo "[prueba] Archivos generados:"; ls -1 /home/node/.n8n-files
 fi
 # 3) Crea la cuenta de acceso (solo la primera vez) en segundo plano
-node /opt/bot/owner.js &
+node --max-old-space-size=32 /opt/bot/owner.js &
 # 4) Inicia n8n
 exec n8n start
