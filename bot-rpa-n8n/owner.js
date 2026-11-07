@@ -9,12 +9,15 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
     try { const r = await fetch(`${base}/healthz`); if (r.ok) break; } catch {}
     await espera(2000);
   }
-  await espera(3000);
-  try {
-    const r = await fetch(`${base}/rest/owner/setup`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, firstName: 'Bot', lastName: 'SysDespacho' }),
-    });
-    console.log('[owner] Configuración de cuenta:', r.status, r.ok ? 'creada' : 'ya existía o no se pudo crear');
-  } catch (e) { console.log('[owner] Error:', e.message); }
+  for (let i = 0; i < 60; i++) {
+    try {
+      const r = await fetch(`${base}/rest/owner/setup`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, firstName: 'Bot', lastName: 'SysDespacho' }),
+      });
+      if (r.status !== 404) { console.log('[owner] Configuración de cuenta:', r.status, r.ok ? 'creada' : (await r.text()).slice(0, 200)); return; }
+    } catch (e) { console.log('[owner] Error:', e.message); }
+    await espera(3000);
+  }
+  console.log('[owner] No se pudo crear la cuenta automáticamente; créela desde el navegador.');
 })();
