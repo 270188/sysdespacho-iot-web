@@ -9,13 +9,13 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
     try { const r = await fetch(`${base}/healthz`); if (r.ok) break; } catch {}
     await espera(2000);
   }
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 200; i++) {
     try {
       const r = await fetch(`${base}/rest/owner/setup`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, firstName: 'Bot', lastName: 'SysDespacho' }),
       });
-      if (r.status !== 404) { console.log('[owner] Configuración de cuenta:', r.status, r.ok ? 'creada' : (await r.text()).slice(0, 200)); return; }
+      if (r.status !== 404 && r.status < 500) { console.log('[owner] Configuración de cuenta:', r.status, r.ok ? 'creada' : (await r.text()).slice(0, 200)); return; }
     } catch (e) { console.log('[owner] Error:', e.message); }
     await espera(3000);
   }
