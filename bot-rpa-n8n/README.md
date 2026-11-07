@@ -1,6 +1,6 @@
 # Bot RPA en n8n · tipo de cambio del BCRP (SysDespacho-IA)
 
-Imagen de Docker con n8n 2.35.6 y el flujo **SysDespacho-IA - Bot RPA tipo de cambio BCRP**
+Imagen de Docker con n8n 1.123 (en Render; el flujo también funciona en 2.35.6) y el flujo **SysDespacho-IA - Bot RPA tipo de cambio BCRP**
 ya importado. El bot consulta en el portal del BCRP el tipo de cambio interbancario
 (compra PD04637PD y venta PD04638PD) de los últimos 30 días, lo guarda en Excel con la
 fuente de consulta y lo verifica contra la API oficial del BCRP.
