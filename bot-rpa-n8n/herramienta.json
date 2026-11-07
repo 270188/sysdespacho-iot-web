@@ -1,0 +1,741 @@
+{
+  "id": "SysDespachoBcrpTool",
+  "name": "SysDespacho-IA - Herramienta Consultar_Tipo_Cambio_BCRP",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1. Inicio y parámetros de la consulta\nSysDespacho-IA necesita el tipo de cambio del día para valorizar en soles los despachos de exportación. Aquí se definen las series del BCRP (compra y venta) y el rango de fechas, igual que al llenar **Desde** y **Hasta** en el portal.",
+        "height": 500,
+        "width": 640,
+        "color": 7
+      },
+      "id": "0d422468-0b27-4ecb-8f30-2215663d30c5",
+      "name": "Nota 0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Consulta en el portal del BCRP\nAbre la tabla de resultados de las dos series para el rango de fechas y lee cada fila (fecha, compra y venta).",
+        "height": 500,
+        "width": 900,
+        "color": 5
+      },
+      "id": "56c9d6c6-12f4-4f77-985f-47a073bdee2d",
+      "name": "Nota 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3. Validación y Excel\nComprueba que haya al menos 10 fechas con datos, arma las columnas y guarda el Excel con la fuente de consulta.",
+        "height": 500,
+        "width": 1340,
+        "color": 4
+      },
+      "id": "e849ff38-ee1d-4021-9aa8-8c9bb4b979ba",
+      "name": "Nota 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 4. Verificación con la API oficial del BCRP\nVuelve a consultar las mismas series por la API del BCRP y compara fecha por fecha con lo extraído de la página.",
+        "height": 340,
+        "width": 1360,
+        "color": 3
+      },
+      "id": "3ead1a41-2a53-4892-bf7b-50fac5eeef7e",
+      "name": "Nota 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "fecha_inicio",
+              "type": "string"
+            },
+            {
+              "name": "fecha_fin",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "0fca2ccf-45a7-41e1-bbe5-c861e027879c",
+      "name": "Recibir fechas del asistente",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5769e8e1-5e57-4cbc-9799-1c4d3896ed74",
+              "name": "url_base",
+              "value": "https://estadisticas.bcrp.gob.pe",
+              "type": "string"
+            },
+            {
+              "id": "71a71d29-4140-48e3-bff2-cb49f3f65a7a",
+              "name": "serie_compra",
+              "value": "PD04637PD",
+              "type": "string"
+            },
+            {
+              "id": "81e94828-5738-4fa1-a518-e26d13923bc5",
+              "name": "serie_venta",
+              "value": "PD04638PD",
+              "type": "string"
+            },
+            {
+              "id": "21704c75-1daa-4da3-bdaf-433c0d8d6a1a",
+              "name": "fecha_inicio",
+              "value": "={{ String($('Recibir fechas del asistente').first().json.fecha_inicio || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "93182360-8db0-44ba-961d-a8d7b00f0aae",
+              "name": "fecha_fin",
+              "value": "={{ String($('Recibir fechas del asistente').first().json.fecha_fin || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "6c5e8f76-6d8a-4fd0-a224-260eec3076ab",
+              "name": "minimo_fechas",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "e2a1a75d-0306-4712-82ba-056c1350ff5d",
+              "name": "carpeta_salida",
+              "value": "/home/node/.n8n-files",
+              "type": "string"
+            },
+            {
+              "id": "f48dd607-5dae-4eea-b6b7-8dda9031ee9e",
+              "name": "inicio",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5bc99497-1ffc-4e35-8f20-5ce9eaf5e69c",
+      "name": "Configuración",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cac6d1ee-2c50-4b7c-be06-1abdc6235674",
+              "name": "url_consulta",
+              "value": "={{ $json.url_base.replace(/\\/+$/, '') + '/estadisticas/series/diarias/resultados/' + $json.serie_compra + '-' + $json.serie_venta + '/html/' + $json.fecha_inicio + '/' + $json.fecha_fin + '/' }}",
+              "type": "string"
+            },
+            {
+              "id": "562042d5-e3e3-45db-b231-826761b8e5de",
+              "name": "url_api",
+              "value": "={{ $json.url_base.replace(/\\/+$/, '') + '/estadisticas/series/api/' + $json.serie_compra + '-' + $json.serie_venta + '/json/' + $json.fecha_inicio + '/' + $json.fecha_fin }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "887030f4-3089-4b57-b841-c5e7ca2e0f40",
+      "name": "Armar URL de consulta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_consulta }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; SysDespacho-IA-BotRPA/1.0; uso academico)"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "html"
+            }
+          }
+        }
+      },
+      "id": "2e87d2ad-24ae-4d64-b3f9-ec7b639827fc",
+      "name": "Abrir tabla de resultados del BCRP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        340
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "json",
+        "dataPropertyName": "html",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "titulo",
+              "cssSelector": "title",
+              "returnValue": "text"
+            },
+            {
+              "key": "encabezados",
+              "cssSelector": "table.series th",
+              "returnValue": "text",
+              "returnArray": true
+            },
+            {
+              "key": "filas",
+              "cssSelector": "table.series tr",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true,
+          "cleanUpText": false
+        }
+      },
+      "id": "275ea0fc-2a33-4a70-a441-611fc9eb6f56",
+      "name": "Leer filas de la tabla",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte cada fila de la tabla del BCRP en un registro: fecha, compra y venta.\nconst cfg = $('Armar URL de consulta').first().json;\nconst d = $input.first().json;\nconst MESES = { Ene: 1, Feb: 2, Mar: 3, Abr: 4, May: 5, Jun: 6, Jul: 7, Ago: 8, Set: 9, Sep: 9, Oct: 10, Nov: 11, Dic: 12 };\nconst texto = (h) => String(h || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\\s+/g, ' ').trim();\nconst ahora = $now.setZone('America/Lima').toFormat('yyyy-MM-dd HH:mm:ss');\n\nconst registros = [];\nconst sinDato = [];\nfor (const fila of (Array.isArray(d.filas) ? d.filas : [])) {\n  const celdas = [...String(fila).matchAll(/<td[^>]*>([\\s\\S]*?)<\\/td>/gi)].map((m) => texto(m[1]));\n  if (celdas.length < 3) continue;                       // encabezados u otras filas\n  const m = celdas[0].match(/^(\\d{2})\\.?([A-Za-zé]{3})\\.?(\\d{2})$/);\n  if (!m || !MESES[m[2]]) continue;\n  const fecha = `20${m[3]}-${String(MESES[m[2]]).padStart(2, '0')}-${m[1]}`;\n  const num = (v) => (/^-?\\d+(\\.\\d+)?$/.test(v) ? Number(v) : null);\n  const compra = num(celdas[1]), venta = num(celdas[2]);\n  if (compra === null || venta === null) { sinDato.push(`${celdas[0]} (${celdas[1]} / ${celdas[2]})`); continue; }\n  registros.push({ fecha, fecha_bcrp: celdas[0], compra, venta });\n}\nregistros.sort((a, b) => a.fecha.localeCompare(b.fecha));\n\nreturn [{ json: {\n  titulo_pagina: d.titulo || '',\n  encabezados: d.encabezados || [],\n  url_consulta: cfg.url_consulta,\n  url_api: cfg.url_api,\n  fecha_consulta: ahora,\n  total_registros: registros.length,\n  fechas_sin_dato: sinDato,\n  registros,\n} }];\n"
+      },
+      "id": "32cb0cb0-d55f-43d7-b16b-34918cb68085",
+      "name": "Organizar registros",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ccb0217e-3b3b-4186-81a2-f57cfb8f02f0",
+              "name": "total_registros",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "66d0f5b5-aaf4-45e5-aaef-88f0caecbf63",
+              "name": "incidencia",
+              "value": "=No se pudo abrir {{ $('Armar URL de consulta').item.json.url_consulta }} — {{ (() => { const m = String($json.error?.message || $json.error || ''); if (/ECONNREFUSED|refused/i.test(m)) return 'el portal rechazó la conexión (no está disponible)'; if (/ENOTFOUND|getaddrinfo/i.test(m)) return 'no se encontró la dirección del portal'; if (/timeout|ETIMEDOUT/i.test(m)) return 'se agotó el tiempo de espera'; if (/403|forbidden/i.test(m)) return 'el portal denegó el acceso (error 403)'; if (/404/.test(m)) return 'la consulta no existe (error 404)'; return 'error de conexión'; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a2efdea9-3dbe-4a33-a20b-424d7bc11366",
+      "name": "Registrar incidencia",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        940,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4c5fd6c4-b1da-4e37-bbdd-21fd6f8e91a4",
+              "leftValue": "={{ $json.total_registros }}",
+              "rightValue": "={{ $('Configuración').first().json.minimo_fechas }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4e841a35-42f0-4b91-bfe7-19a175ad78c8",
+      "name": "¿Hay fechas con dato?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "27b836ad-61da-4470-8078-07d127ee79eb",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "95557f00-62c2-4e41-a81e-08a79791b4e4",
+              "name": "registros",
+              "value": "={{ $json.total_registros || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "02b76030-8ca9-4a1e-ae75-ec2c42c8741c",
+              "name": "excel_generado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "f3ad2eb2-393a-44f4-b67b-6a0df593c941",
+              "name": "error",
+              "value": "={{ $json.incidencia ? 'No se pudo consultar el BCRP: ' + $json.incidencia + '.' : 'El BCRP no publicó tipo de cambio entre ' + $('Configuración').first().json.fecha_inicio + ' y ' + $('Configuración').first().json.fecha_fin + '. Verifique que las fechas tengan el formato aaaa-mm-dd, que la fecha inicial no sea mayor que la final y que el rango incluya días hábiles ya publicados (el BCRP no publica fines de semana, feriados ni fechas futuras).' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6aee71b2-302f-4479-b94a-94c9e03a6e36",
+      "name": "Responder error al asistente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Una fila por fecha con los encabezados del Excel y la fuente de consulta.\nconst d = $input.first().json;\nconst cfg = $('Configuración').first().json;\nreturn d.registros.map((r, i) => ({ json: {\n  'N°': i + 1,\n  'Fecha': DateTime.fromISO(r.fecha).toFormat('dd/MM/yyyy'),\n  'Fecha según BCRP': r.fecha_bcrp,\n  'Compra (S/ por US$)': r.compra,\n  'Venta (S/ por US$)': r.venta,\n  'Serie compra': cfg.serie_compra,\n  'Serie venta': cfg.serie_venta,\n  'Fuente de consulta (URL)': d.url_consulta,\n  'Fecha y hora de consulta': d.fecha_consulta,\n} }));\n"
+      },
+      "id": "61d84c1d-fa8f-4e8e-9e18-55f1b8a0c4c1",
+      "name": "Columnas del Excel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "data",
+        "options": {
+          "fileName": "={{ 'tipo_cambio_bcrp_sysdespacho_' + $now.setZone('America/Lima').toFormat('yyyyMMdd_HHmmss') + '.xlsx' }}",
+          "sheetName": "Tipo de cambio",
+          "headerRow": true
+        }
+      },
+      "id": "523331d6-d933-48d0-a064-87168f134228",
+      "name": "Generar Excel",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2040,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $('Configuración').first().json.carpeta_salida.replace(/[\\/\\\\]+$/, '') + '/' + $binary.data.fileName }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "d26b6822-4db8-4576-9343-c434873bd9e3",
+      "name": "Guardar Excel",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2260,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resumen medido de la ejecución (no son estimaciones).\nconst cfg = $('Configuración').first().json;\nconst org = $('Organizar registros').first().json;\nconst filas = $('Columnas del Excel').all().map((i) => i.json);\nconst inicio = DateTime.fromISO(cfg.inicio);\nconst fin = $now;\nreturn [{ json: {\n  'Fechas con dato': filas.length,\n  'Rango consultado': `${cfg.fecha_inicio} a ${cfg.fecha_fin}`,\n  'Primera fecha': filas[0]['Fecha'],\n  'Última fecha': filas[filas.length - 1]['Fecha'],\n  'Fechas sin dato (n.d.)': org.fechas_sin_dato.length ? org.fechas_sin_dato.join(', ') : 'Ninguna',\n  'Archivo Excel': `${cfg.carpeta_salida.replace(/[\\/\\\\]+$/, '')}/${$('Generar Excel').first().binary.data.fileName}`,\n  'Duración (segundos)': Math.round(fin.diff(inicio, 'seconds').seconds * 10) / 10,\n} }];\n"
+      },
+      "id": "8f49abf8-f203-41a8-a4e9-0a9c9f008feb",
+      "name": "Resumen de la ejecución",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Organizar registros').first().json.url_api }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; SysDespacho-IA-BotRPA/1.0; uso academico)"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "35817453-f30a-4a3b-accc-a64ad5539939",
+      "name": "Consultar API del BCRP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2040,
+        780
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compara cada fecha del Excel con la respuesta de la API oficial del BCRP.\nconst MESES = { Ene: 1, Feb: 2, Mar: 3, Abr: 4, May: 5, Jun: 6, Jul: 7, Ago: 8, Set: 9, Sep: 9, Oct: 10, Nov: 11, Dic: 12 };\nconst api = $input.first().json;\nconst periodos = Array.isArray(api.periods) ? api.periods : [];\nconst porFecha = {};\nfor (const p of periodos) {\n  const m = String(p.name).match(/^(\\d{2})\\.?([A-Za-zé]{3})\\.?(\\d{2})$/);\n  if (!m || !MESES[m[2]]) continue;\n  porFecha[`20${m[3]}-${String(MESES[m[2]]).padStart(2, '0')}-${m[1]}`] = p.values || [];\n}\nconst ahora = $now.setZone('America/Lima').toFormat('yyyy-MM-dd HH:mm:ss');\nconst regs = $('Organizar registros').first().json.registros;\nreturn regs.map((r, i) => {\n  const v = porFecha[r.fecha];\n  // La API entrega más decimales; el BCRP publica 3 decimales, así que se redondea a 3 para comparar.\n  const r3 = (x) => Math.round(Number(x) * 1000) / 1000;\n  const cApi = v && v[0] !== 'n.d.' ? r3(v[0]) : null, vApi = v && v[1] !== 'n.d.' ? r3(v[1]) : null;\n  const ok = cApi !== null && vApi !== null && cApi === r3(r.compra) && vApi === r3(r.venta);\n  return { json: {\n    'N°': i + 1,\n    'Fecha': DateTime.fromISO(r.fecha).toFormat('dd/MM/yyyy'),\n    'Compra en Excel': r.compra,\n    'Compra en API BCRP (3 decimales)': cApi !== null ? cApi : '(sin dato en la API)',\n    'Venta en Excel': r.venta,\n    'Venta en API BCRP (3 decimales)': vApi !== null ? vApi : '(sin dato en la API)',\n    'Resultado': ok ? 'COINCIDE' : 'NO COINCIDE',\n    'Fuente de verificación (API)': $('Organizar registros').first().json.url_api,\n    'Fecha y hora de verificación': ahora,\n  } };\n});\n"
+      },
+      "id": "1f1ed1ad-2ff7-4f7c-a14c-850e18d5d89c",
+      "name": "Comparar con el Excel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2260,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "data",
+        "options": {
+          "fileName": "={{ 'verificacion_tipo_cambio_' + $now.setZone('America/Lima').toFormat('yyyyMMdd_HHmmss') + '.xlsx' }}",
+          "sheetName": "Verificación",
+          "headerRow": true
+        }
+      },
+      "id": "f060e451-bb35-4da5-b32d-6a18e6f96c00",
+      "name": "Generar Excel de verificación",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2480,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $('Configuración').first().json.carpeta_salida.replace(/[\\/\\\\]+$/, '') + '/' + $binary.data.fileName }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "b41064a3-a31a-4fbc-8ddf-4501e4d82eda",
+      "name": "Guardar verificación",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2700,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Respuesta que recibe el asistente: solo datos obtenidos del BCRP, sin estimaciones.\nconst cfg = $('Configuración').first().json;\nconst res = $('Resumen de la ejecución').first().json;\nconst filas = $('Columnas del Excel').all().map((i) => i.json);\nconst ver = $('Comparar con el Excel').all().map((i) => i.json);\nconst archivo = $('Generar Excel').first().binary.data.fileName;\nconst archivoVer = $('Generar Excel de verificación').first().binary.data.fileName;\nconst coinciden = ver.filter((v) => v['Resultado'] === 'COINCIDE').length;\nconst enlace = (n) => 'https://sysdespacho-bot-rpa.onrender.com/webhook/sysdespacho/excel?archivo=' + encodeURIComponent(n);\nreturn [{ json: {\n  ok: true,\n  registros: filas.length,\n  rango_consultado: `${cfg.fecha_inicio} a ${cfg.fecha_fin}`,\n  primera_fecha: res['Primera fecha'],\n  ultima_fecha: res['Última fecha'],\n  fechas_sin_dato: res['Fechas sin dato (n.d.)'],\n  excel_generado: true,\n  archivo_excel: archivo,\n  enlace_descarga_excel: enlace(archivo),\n  verificacion_api: `${coinciden} de ${ver.length} fechas coinciden con la API oficial del BCRP`,\n  enlace_descarga_verificacion: enlace(archivoVer),\n  tipo_cambio: filas.map((f) => ({ fecha: f['Fecha'], compra: f['Compra (S/ por US$)'], venta: f['Venta (S/ por US$)'] })),\n  fuente: filas[0]['Fuente de consulta (URL)'],\n  duracion_segundos: res['Duración (segundos)'],\n} }];\n"
+      },
+      "id": "37867750-57b0-4dc0-a6bd-f43eda71bd45",
+      "name": "Responder al asistente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2920,
+        780
+      ]
+    }
+  ],
+  "connections": {
+    "Recibir fechas del asistente": {
+      "main": [
+        [
+          {
+            "node": "Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración": {
+      "main": [
+        [
+          {
+            "node": "Armar URL de consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar URL de consulta": {
+      "main": [
+        [
+          {
+            "node": "Abrir tabla de resultados del BCRP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abrir tabla de resultados del BCRP": {
+      "main": [
+        [
+          {
+            "node": "Leer filas de la tabla",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer filas de la tabla": {
+      "main": [
+        [
+          {
+            "node": "Organizar registros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organizar registros": {
+      "main": [
+        [
+          {
+            "node": "¿Hay fechas con dato?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar incidencia": {
+      "main": [
+        [
+          {
+            "node": "¿Hay fechas con dato?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay fechas con dato?": {
+      "main": [
+        [
+          {
+            "node": "Columnas del Excel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder error al asistente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Columnas del Excel": {
+      "main": [
+        [
+          {
+            "node": "Generar Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Excel": {
+      "main": [
+        [
+          {
+            "node": "Guardar Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Excel": {
+      "main": [
+        [
+          {
+            "node": "Resumen de la ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen de la ejecución": {
+      "main": [
+        [
+          {
+            "node": "Consultar API del BCRP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar API del BCRP": {
+      "main": [
+        [
+          {
+            "node": "Comparar con el Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comparar con el Excel": {
+      "main": [
+        [
+          {
+            "node": "Generar Excel de verificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Excel de verificación": {
+      "main": [
+        [
+          {
+            "node": "Guardar verificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar verificación": {
+      "main": [
+        [
+          {
+            "node": "Responder al asistente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Lima",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

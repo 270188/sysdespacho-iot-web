@@ -1,0 +1,210 @@
+{
+  "id": "SysDespachoDescarga",
+  "name": "SysDespacho-IA - Descargar Excel",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Descarga de los Excel\nEl asistente entrega un enlace a este flujo para bajar el Excel generado por el bot.",
+        "height": 180,
+        "width": 900,
+        "color": 5
+      },
+      "id": "0ed4b05d-f601-45d8-9e45-a25b4a3af849",
+      "name": "Nota 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "path": "sysdespacho/excel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5497fd20-2e8a-408a-8b0b-c103e09a96f0",
+      "name": "Enlace de descarga",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "0b8e2a44-6c1d-4e0f-8a7b-5f3c9d1e2026"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo se permiten nombres de archivo generados por el bot (evita leer otros archivos del servidor).\nconst nombre = String($json.query?.archivo || '');\nconst valido = /^(tipo_cambio_bcrp_sysdespacho|verificacion_tipo_cambio)_\\d{8}_\\d{6}\\.xlsx$/.test(nombre);\nreturn [{ json: { nombre, valido, ruta: '/home/node/.n8n-files/' + nombre } }];\n"
+      },
+      "id": "0561e442-7718-48a2-aa51-a7ec9c903df3",
+      "name": "Validar nombre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "11e13cee-e8e6-4b68-96b0-fa95a9617ce1",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "005763f5-0e47-412f-972d-a5ebde16b2e1",
+      "name": "¿Nombre válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.ruta }}",
+        "options": {}
+      },
+      "id": "f07a1f8e-d654-4049-9f0a-9593694a36a1",
+      "name": "Leer Excel",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        660,
+        160
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "inputDataFieldName": "data",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Disposition",
+                "value": "=attachment; filename=\"{{ $('Validar nombre').first().json.nombre }}\""
+              }
+            ]
+          }
+        }
+      },
+      "id": "3fd82d78-9aca-4aca-912b-7cd4dc64594c",
+      "name": "Enviar Excel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "No se encontró el archivo. Puede que el servidor se haya reiniciado; pida la consulta de nuevo al asistente.",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "99214d56-21aa-4053-a57b-9c936a8a0634",
+      "name": "Archivo no encontrado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        340
+      ]
+    }
+  ],
+  "connections": {
+    "Enlace de descarga": {
+      "main": [
+        [
+          {
+            "node": "Validar nombre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar nombre": {
+      "main": [
+        [
+          {
+            "node": "¿Nombre válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Nombre válido?": {
+      "main": [
+        [
+          {
+            "node": "Leer Excel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Archivo no encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Excel": {
+      "main": [
+        [
+          {
+            "node": "Enviar Excel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Archivo no encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Lima",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

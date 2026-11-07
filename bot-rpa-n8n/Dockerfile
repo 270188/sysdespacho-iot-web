@@ -2,7 +2,7 @@
 # Se usa n8n 1.x porque consume menos memoria que 2.x y cabe en el plan gratuito de Render (512 MB)
 FROM n8nio/n8n:1.123.92
 USER root
-COPY flujo.json iniciar.sh owner.js /opt/bot/
+COPY flujo.json herramienta.json asistente.json descarga.json prueba_asistente.json iniciar.sh owner.js /opt/bot/
 RUN chmod +x /opt/bot/iniciar.sh \
  && mkdir -p /home/node/.n8n-files \
  && chown -R node:node /opt/bot /home/node/.n8n-files

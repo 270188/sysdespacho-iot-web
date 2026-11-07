@@ -1,0 +1,204 @@
+{
+  "id": "SysDespachoAsistente",
+  "name": "SysDespacho-IA - Asistente de tipo de cambio (chat)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Asistente de SysDespacho\nEl usuario escribe en el chat (por ejemplo: *tipo de cambio del 1 al 15 de octubre*). El agente identifica las fechas, pide la que falte y llama a la herramienta **Consultar_Tipo_Cambio_BCRP**, que ejecuta el bot RPA, genera el Excel y lo verifica con la API del BCRP.",
+        "height": 220,
+        "width": 980,
+        "color": 7
+      },
+      "id": "e07db2c0-0cab-4ae4-beb5-9d6f2ab8c2a8",
+      "name": "Nota 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "public": true,
+        "mode": "hostedChat",
+        "authentication": "none",
+        "initialMessages": "Hola, soy el asistente de automatización de SysDespacho.\nPuedo consultar el tipo de cambio oficial del BCRP y generar el Excel para los despachos.\n¿Entre qué fechas lo necesitas? (por ejemplo: del 1 al 15 de octubre de 2026)",
+        "options": {
+          "title": "Asistente SysDespacho",
+          "subtitle": "Tipo de cambio oficial del BCRP para los despachos",
+          "inputPlaceholder": "Escribe las fechas que necesitas…",
+          "loadPreviousSession": "memory"
+        }
+      },
+      "id": "ebc0942d-8cfe-4714-94ed-924febb6ad51",
+      "name": "Chat de SysDespacho",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "5d0c6f2e-5b1a-4c3e-9f4a-0a5ddb7e2026"
+    },
+    {
+      "parameters": {
+        "promptType": "auto",
+        "options": {
+          "systemMessage": "=Eres el asistente de automatización de SysDespacho.\n\nTu función es ayudar a consultar el tipo de cambio oficial del BCRP\ny generar archivos Excel para los despachos.\n\nCuando el usuario solicite una consulta:\n1. Identifica la fecha inicial y final.\n2. Si falta alguna fecha, solicítala.\n3. Ejecuta la herramienta Consultar_Tipo_Cambio_BCRP.\n4. No inventes valores.\n5. Informa cuántos registros se obtuvieron.\n6. Indica si el archivo Excel se generó correctamente.\n7. Si ocurre un error, explícalo de manera clara.\n\nDatos de contexto:\n- Hoy es {{ $now.setZone('America/Lima').toFormat('cccc d \\'de\\' LLLL \\'de\\' yyyy', { locale: 'es' }) }} ({{ $now.setZone('America/Lima').toFormat('yyyy-MM-dd') }}), hora de Lima.\n- El tipo de cambio es el interbancario del BCRP en soles por dólar (compra serie PD04637PD y venta serie PD04638PD).\n\nCómo trabajar:\n- Envía las fechas a la herramienta siempre en formato aaaa-mm-dd. Si el usuario no indica el año, usa el año actual. \"Hoy\", \"ayer\" o \"la semana pasada\" se calculan con la fecha de hoy.\n- Si el usuario da una sola fecha (por ejemplo \"el tipo de cambio del 15 de octubre\"), usa esa misma fecha como inicial y final.\n- Si la fecha inicial es mayor que la final, o alguna es futura, explícaselo y pide fechas correctas antes de consultar.\n- Usa únicamente los valores que devuelve la herramienta. Si el usuario pregunta por una fecha que no está en la respuesta, dile que el BCRP no publicó dato para ese día (fin de semana, feriado o fecha aún no publicada).\n- Si la herramienta responde ok = true, informa: el número de registros, el rango (primera y última fecha), que el Excel se generó correctamente con su nombre y su enlace de descarga, y el resultado de la verificación con la API del BCRP. Muestra una tabla con fecha, compra y venta solo si hay 10 registros o menos, o si el usuario la pide.\n- Si la herramienta responde ok = false, indica que el Excel no se generó y explica el motivo del campo \"error\" en palabras sencillas, con lo que el usuario puede hacer.\n- Responde siempre en español, de forma breve y clara.",
+          "maxIterations": 6
+        }
+      },
+      "id": "d3fae82d-089a-4331-9bea-89e513eac635",
+      "name": "Asistente SysDespacho",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        300,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-flash-latest",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "385e33c8-114e-4b51-9aaa-c43fea87329c",
+      "name": "Modelo Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        160,
+        480
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GeminiSysDespacho",
+          "name": "Gemini SysDespacho"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "3c4ce01a-d006-43eb-8548-a04c14089e7f",
+      "name": "Memoria de la conversación",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        340,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "name": "Consultar_Tipo_Cambio_BCRP",
+        "description": "Consulta en el portal oficial del BCRP el tipo de cambio interbancario (compra y venta, S/ por US$) entre dos fechas, genera el Excel para SysDespacho y lo verifica contra la API del BCRP. Entradas: fecha_inicio y fecha_fin en formato aaaa-mm-dd. Devuelve ok, registros, excel_generado, archivo_excel, enlace_descarga_excel, verificacion_api, tipo_cambio (lista de fecha, compra, venta) o error.",
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "SysDespachoBcrpTool",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha_inicio": "={{ $fromAI('fecha_inicio', `Fecha inicial en formato aaaa-mm-dd`, 'string') }}",
+            "fecha_fin": "={{ $fromAI('fecha_fin', `Fecha final en formato aaaa-mm-dd`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha_inicio",
+              "displayName": "fecha_inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "fecha_fin",
+              "displayName": "fecha_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "934cc41d-3b54-4eb2-abfb-5f6b86fc5c89",
+      "name": "Consultar_Tipo_Cambio_BCRP",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        540,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Chat de SysDespacho": {
+      "main": [
+        [
+          {
+            "node": "Asistente SysDespacho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Asistente SysDespacho",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria de la conversación": {
+      "ai_memory": [
+        [
+          {
+            "node": "Asistente SysDespacho",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar_Tipo_Cambio_BCRP": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente SysDespacho",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Lima",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
